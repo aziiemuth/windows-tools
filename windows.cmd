@@ -56,7 +56,7 @@ echo [20] Aktivasi Spotify
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
-set /p choice=Masukkan pilihan (1-19): 
+set /p choice=Masukkan pilihan (1-20): 
 
 if %choice%==1 goto cek_wind
 if %choice%==2 goto akt_wind
@@ -80,7 +80,7 @@ if %choice%==19 goto s_n
 if %choice%==20 goto a_s
 if %choice%==0 goto exit
 echo =====================================================
-echo Pilihan salah! Silakan masukkan angka yang sesuai (1-16).
+echo Pilihan salah! Silakan masukkan angka yang sesuai (1-20).
 echo =====================================================
 pause
 goto menu
@@ -1457,3 +1457,4 @@ echo =====================================================
 echo   Terima kasih telah menggunakan
 
 echo
+
