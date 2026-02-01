@@ -52,6 +52,7 @@ echo [16] Aktivasi Windows/Office Online V1
 echo [17] Windows Utility
 echo [18] Aktivasi Windows/Office Online V2
 echo [19] Ekstrak Serial Number + Model PC
+echo [20] Aktivasi Spotify
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
@@ -76,6 +77,7 @@ if %choice%==16 goto aktivasi_KMS
 if %choice%==17 goto win_u
 if %choice%==18 goto win_a
 if %choice%==19 goto s_n
+if %choice%==20 goto a_s
 if %choice%==0 goto exit
 echo =====================================================
 echo Pilihan salah! Silakan masukkan angka yang sesuai (1-16).
@@ -1440,8 +1442,18 @@ wmic csproduct get name, vendor
 pause
 goto menu
 
+:a_s
+cls
+echo =====================================================
+echo       Aktivasi Spotify Seumur Hidup
+echo =====================================================
+iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
+pause
+goto menu
+
 :exit
 cls
 echo =====================================================
 echo   Terima kasih telah menggunakan
+
 echo
