@@ -1447,7 +1447,7 @@ cls
 echo =====================================================
 echo       Aktivasi Spotify Seumur Hidup
 echo =====================================================
-iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
+powershell -NoProfile -Command "& { iwr https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 -OutFile $env:TEMP\install-spicetify.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File $env:TEMP\install-spicetify.ps1 }"
 pause
 goto menu
 
@@ -1457,4 +1457,5 @@ echo =====================================================
 echo   Terima kasih telah menggunakan
 
 echo
+
 
