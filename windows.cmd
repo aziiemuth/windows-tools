@@ -2,22 +2,14 @@
 title Windows Tools
 color f0
 
-:: Cek apakah script dijalankan dengan hak administrator
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo =====================================================
-    echo              Memerlukan Hak Administrator
-    echo =====================================================
-    echo Pencet Apapun, Script sedang dijalankan ulang dengan Hak Administrator...
-    echo =====================================================
-    pause
-    :: Restart script dengan hak administrator
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit
-)
-
 :: Konfigurasi lokasi
 set LOCATION=Banyuwangi, Jawa Timur
+
+:: Cek apakah ada argument (pilihan yang diteruskan setelah restart admin)
+if not "%~1"=="" (
+    set choice=%~1
+    goto process_choice
+)
 
 :menu
 cls
@@ -56,7 +48,60 @@ echo [20] Aktivasi Spotify
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
-set /p choice=Masukkan pilihan (1-20): 
+echo =====================================================
+set "choice="
+set /p choice=Masukkan pilihan (0-20): 
+
+:: Validasi input - cek apakah kosong
+if not defined choice (
+    echo.
+    echo [ERROR] Input tidak boleh kosong!
+    timeout /t 2 /nobreak >nul
+    goto menu
+)
+
+:: Validasi input - cek apakah angka valid (0-20)
+echo %choice%| findstr /r "^[0-9][0-9]*$" >nul
+if %errorLevel% neq 0 (
+    echo.
+    echo [ERROR] Masukkan angka saja!
+    timeout /t 2 /nobreak >nul
+    goto menu
+)
+
+:: Cek range 0-20
+if %choice% gtr 20 (
+    echo.
+    echo [ERROR] Pilihan harus antara 0-20!
+    timeout /t 2 /nobreak >nul
+    goto menu
+)
+if %choice% lss 0 (
+    echo.
+    echo [ERROR] Pilihan harus antara 0-20!
+    timeout /t 2 /nobreak >nul
+    goto menu
+)
+
+:process_choice
+:: Pilihan 20 (Aktivasi Spotify) tidak memerlukan admin
+if %choice%==20 goto a_s_no_admin
+:: Pilihan 0 (Exit) tidak memerlukan admin
+if %choice%==0 goto exit
+
+:: Cek apakah script dijalankan dengan hak administrator untuk pilihan lain
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo =====================================================
+    echo              Memerlukan Hak Administrator
+    echo =====================================================
+    echo Pencet Apapun, Script sedang dijalankan ulang dengan Hak Administrator...
+    echo =====================================================
+    pause
+    :: Restart script dengan hak administrator dan teruskan pilihan user
+    powershell -Command "Start-Process cmd -ArgumentList '/c \"%~f0\" %choice%' -Verb RunAs"
+    exit
+)
 
 if %choice%==1 goto cek_wind
 if %choice%==2 goto akt_wind
@@ -77,12 +122,10 @@ if %choice%==16 goto aktivasi_KMS
 if %choice%==17 goto win_u
 if %choice%==18 goto win_a
 if %choice%==19 goto s_n
-if %choice%==20 goto a_s
-if %choice%==0 goto exit
-echo =====================================================
-echo Pilihan salah! Silakan masukkan angka yang sesuai (1-20).
-echo =====================================================
-pause
+:: Fallback jika ada yang terlewat
+echo.
+echo [ERROR] Pilihan tidak valid!
+timeout /t 2 /nobreak >nul
 goto menu
 
 :cek_wind
@@ -1437,26 +1480,64 @@ cls
 echo =====================================================
 echo       Ekstrak Serial Number + Model PC
 echo =====================================================
-wmic bios get serialnumber
-wmic csproduct get name, vendor
+echo.
+echo Serial Number:
+powershell -NoProfile -Command "(Get-WmiObject -Class Win32_BIOS).SerialNumber"
+echo.
+echo Model PC:
+powershell -NoProfile -Command "$cs = Get-WmiObject -Class Win32_ComputerSystem; Write-Host ('Name: ' + $cs.Name); Write-Host ('Manufacturer: ' + $cs.Manufacturer); Write-Host ('Model: ' + $cs.Model)"
+echo.
 pause
 goto menu
 
-:a_s
+:a_s_no_admin
 cls
 echo =====================================================
-echo       Aktivasi Spotify Seumur Hidup
+echo       Aktivasi Spotify Seumur Hidup (No Admin)
 echo =====================================================
-powershell -NoProfile -Command "& { iwr https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 -OutFile $env:TEMP\install.ps1; & $env:TEMP\install.ps1 }"
+:: Cek apakah script berjalan dengan admin
+net session >nul 2>&1
+if %errorLevel% neq 0 goto spotify_run_normal
+:: Jika admin, buat scheduled task untuk jalankan sebagai user biasa
+echo.
+echo [PERINGATAN] Script sedang berjalan dengan hak Administrator.
+echo Spicetify harus diinstall sebagai user biasa.
+echo.
+echo Membuat task untuk menjalankan sebagai user biasa...
+echo.
+:: Buat script PowerShell sementara
+echo iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 ^| iex > "%TEMP%\spicetify_install.ps1"
+:: Buat scheduled task yang berjalan sebagai user biasa
+schtasks /create /tn "SpicetifyInstall" /tr "powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File \"%TEMP%\spicetify_install.ps1\"" /sc once /st 00:00 /f >nul 2>&1
+:: Jalankan task
+schtasks /run /tn "SpicetifyInstall" >nul 2>&1
+:: Tunggu sebentar lalu hapus task
+timeout /t 2 /nobreak >nul
+schtasks /delete /tn "SpicetifyInstall" /f >nul 2>&1
+echo Jendela PowerShell baru telah dibuka sebagai user biasa.
+echo Ikuti instruksi di jendela tersebut.
+echo.
+pause
+goto menu
+
+:spotify_run_normal
+:: Jika tidak admin, langsung jalankan
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
 pause
 goto menu
 
 :exit
 cls
 echo =====================================================
-echo   Terima kasih telah menggunakan
-
-echo
-
-
-
+echo              Windows Tools
+echo =====================================================
+echo.
+echo   Terima kasih telah menggunakan Windows Tools!
+echo.
+echo   Created By @Athiief
+echo.
+echo =====================================================
+echo.
+echo Tekan tombol apapun untuk keluar...
+pause >nul
+exit
