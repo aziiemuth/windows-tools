@@ -26,31 +26,29 @@ echo Date    : %date%
 echo Time    : %time%
 echo =====================================================
 echo [1] Cek Status Aktivasi Windows
-echo [2] Aktivasi Windows Digital [Not Working]
-echo [3] Cek Status Aktivasi Office
-echo [4] Aktivasi Office Digital [Not Working]
-echo [5] Reset Jaringan
-echo [6] Jeda Windows Update hingga 2099
-echo [7] Cleaning
-echo [8] Perbaiki Registry
-echo [9] Download dan Install WinRAR
-echo [10] Flush DNS
-echo [11] Perbaiki Bad Sector
-echo [12] Nonaktifkan Semua Partisi yang Dikunci dengan BitLocker
-echo [13] Disable Driver Signature Enforcement
-echo [14] Masuk ke BIOS
-echo [15] Ekstrak Product Key Windows/Office
-echo [16] Aktivasi Windows/Office Online V1
-echo [17] Windows Utility
-echo [18] Aktivasi Windows/Office Online V2
-echo [19] Ekstrak Serial Number + Model PC
-echo [20] Aktivasi Spotify
+echo [2] Cek Status Aktivasi Office
+echo [3] Reset Jaringan
+echo [4] Jeda Windows Update hingga 2099
+echo [5] Cleaning
+echo [6] Perbaiki Registry
+echo [7] Download dan Install WinRAR
+echo [8] Flush DNS
+echo [9] Perbaiki Bad Sector
+echo [10] Nonaktifkan Semua Partisi yang Dikunci dengan BitLocker
+echo [11] Disable Driver Signature Enforcement
+echo [12] Masuk ke BIOS
+echo [13] Ekstrak Product Key Windows/Office
+echo [14] Aktivasi Windows/Office Online V1
+echo [15] Windows Utility
+echo [16] Aktivasi Windows/Office Online V2
+echo [17] Ekstrak Serial Number + Model PC
+echo [18] Aktivasi Spotify
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
 echo =====================================================
 set "choice="
-set /p choice=Masukkan pilihan (0-20): 
+set /p choice=Masukkan pilihan (0-18): 
 
 :: Validasi input - cek apakah kosong
 if not defined choice (
@@ -69,23 +67,23 @@ if %errorLevel% neq 0 (
     goto menu
 )
 
-:: Cek range 0-20
-if %choice% gtr 20 (
+:: Cek range 0-18
+if %choice% gtr 18 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-20!
+    echo [ERROR] Pilihan harus antara 0-18!
     timeout /t 2 /nobreak >nul
     goto menu
 )
 if %choice% lss 0 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-20!
+    echo [ERROR] Pilihan harus antara 0-18!
     timeout /t 2 /nobreak >nul
     goto menu
 )
 
 :process_choice
-:: Pilihan 20 (Aktivasi Spotify) tidak memerlukan admin
-if %choice%==20 goto a_s_no_admin
+:: Pilihan 18 (Aktivasi Spotify) tidak memerlukan admin
+if %choice%==18 goto a_s_no_admin
 :: Pilihan 0 (Exit) tidak memerlukan admin
 if %choice%==0 goto exit
 
@@ -104,24 +102,22 @@ if %errorLevel% neq 0 (
 )
 
 if %choice%==1 goto cek_wind
-if %choice%==2 goto akt_wind
-if %choice%==3 goto cek_office
-if %choice%==4 goto akt_office
-if %choice%==5 goto reset_jaringan
-if %choice%==6 goto jeda_update
-if %choice%==7 goto bersihkan_file
-if %choice%==8 goto perbaiki_registry
-if %choice%==9 goto install_winrar
-if %choice%==10 goto flush_dns
-if %choice%==11 goto perbaiki_bad_sector
-if %choice%==12 goto nonaktifkan_bitlocker
-if %choice%==13 goto disable_signature
-if %choice%==14 goto bios
-if %choice%==15 goto ekstrak_key
-if %choice%==16 goto aktivasi_KMS
-if %choice%==17 goto win_u
-if %choice%==18 goto win_a
-if %choice%==19 goto s_n
+if %choice%==2 goto cek_office
+if %choice%==3 goto reset_jaringan
+if %choice%==4 goto jeda_update
+if %choice%==5 goto bersihkan_file
+if %choice%==6 goto perbaiki_registry
+if %choice%==7 goto install_winrar
+if %choice%==8 goto flush_dns
+if %choice%==9 goto perbaiki_bad_sector
+if %choice%==10 goto nonaktifkan_bitlocker
+if %choice%==11 goto disable_signature
+if %choice%==12 goto bios
+if %choice%==13 goto ekstrak_key
+if %choice%==14 goto aktivasi_KMS
+if %choice%==15 goto win_u
+if %choice%==16 goto win_a
+if %choice%==17 goto s_n
 :: Fallback jika ada yang terlewat
 echo.
 echo [ERROR] Pilihan tidak valid!
@@ -138,40 +134,12 @@ cscript //nologo "%windir%\system32\slmgr.vbs" /xpr
 pause
 goto menu
 
-:akt_wind
-cls
-echo =====================================================
-echo            Aktivasi Windows Digital
-echo =====================================================
-cscript //nologo "%windir%\system32\slmgr.vbs" /ipk W269N-WFGWX-YVC9B-4J6C9-T83GX
-cscript //nologo "%windir%\system32\slmgr.vbs" /skms kms.loli.best
-cscript //nologo "%windir%\system32\slmgr.vbs" /ato
-echo =====================================================
-echo Windows telah diaktivasi secara digital.
-echo =====================================================
-pause
-goto menu
-
 :cek_office
 cls
 echo =====================================================
 echo            Cek Status Aktivasi Office
 echo =====================================================
 cscript //nologo "%ProgramFiles%\Microsoft Office\Office16\ospp.vbs" /dstatus
-pause
-goto menu
-
-:akt_office
-cls
-echo =====================================================
-echo            Aktivasi Office Digital
-echo =====================================================
-cscript //nologo "%ProgramFiles%\Microsoft Office\Office16\ospp.vbs" /inpkey:W269N-WFGWX-YVC9B-4J6C9-T83GX
-cscript //nologo "%ProgramFiles%\Microsoft Office\Office16\ospp.vbs" /sethst:kms.loli.best
-cscript //nologo "%ProgramFiles%\Microsoft Office\Office16\ospp.vbs" /act
-echo =====================================================
-echo Office telah diaktivasi secara digital.
-echo =====================================================
 pause
 goto menu
 
