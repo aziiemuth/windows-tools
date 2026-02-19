@@ -43,12 +43,13 @@ echo [15] Windows Utility
 echo [16] Aktivasi Windows/Office Online V2
 echo [17] Ekstrak Serial Number + Model PC
 echo [18] Aktivasi Spotify
+echo [19] Ghost Toolbox
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
 echo =====================================================
 set "choice="
-set /p choice=Masukkan pilihan (0-18): 
+set /p choice=Masukkan pilihan (0-19): 
 
 :: Validasi input - cek apakah kosong
 if not defined choice (
@@ -67,16 +68,16 @@ if %errorLevel% neq 0 (
     goto menu
 )
 
-:: Cek range 0-18
-if %choice% gtr 18 (
+:: Cek range 0-19
+if %choice% gtr 19 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-18!
+    echo [ERROR] Pilihan harus antara 0-19!
     timeout /t 2 /nobreak >nul
     goto menu
 )
 if %choice% lss 0 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-18!
+    echo [ERROR] Pilihan harus antara 0-19!
     timeout /t 2 /nobreak >nul
     goto menu
 )
@@ -118,6 +119,7 @@ if %choice%==14 goto aktivasi_KMS
 if %choice%==15 goto win_u
 if %choice%==16 goto win_a
 if %choice%==17 goto s_n
+if %choice%==19 goto ghost_toolbox
 :: Fallback jika ada yang terlewat
 echo.
 echo [ERROR] Pilihan tidak valid!
@@ -282,6 +284,26 @@ echo       Ekstrak Product Key Windows/Office
 echo =====================================================
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $key = (Get-WmiObject -Query 'SELECT * FROM SoftwareLicensingService').OA3xOriginalProductKey; if ($key) { Write-Host 'Product Key Windows: ' $key } else { Write-Host 'Tidak dapat menemukan product key Windows.' } } catch { Write-Host 'Terjadi kesalahan saat mencoba mendapatkan product key Windows.' }"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $officeConfig = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration' -Name 'ProductReleaseIds' -ErrorAction Stop; $productIds = $officeConfig.ProductReleaseIds; if ($productIds) { Write-Host 'Product Office terdeteksi: ' $productIds } else { Write-Host 'Tidak dapat menemukan informasi produk Office.' } } catch { Write-Host 'Tidak dapat menemukan registry Office ClickToRun.' }"
+pause
+goto menu
+
+:ghost_toolbox
+cls
+echo =====================================================
+echo              Ghost Toolbox
+echo =====================================================
+echo Mengunduh Ghost Toolbox dari GitHub...
+echo =====================================================
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Batlez/Ghost-Toolbox/main/Ghost%%20Toolbox%%201.9.0/Ghost%%20Toolbox.cmd' -OutFile '%TEMP%\GhostToolbox.cmd'"
+if exist "%TEMP%\GhostToolbox.cmd" (
+    echo Ghost Toolbox berhasil diunduh. Menjalankan...
+    echo =====================================================
+    start cmd /c "%TEMP%\GhostToolbox.cmd"
+) else (
+    echo [ERROR] Gagal mengunduh Ghost Toolbox!
+    echo Pastikan koneksi internet aktif.
+    echo =====================================================
+)
 pause
 goto menu
 
