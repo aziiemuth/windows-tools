@@ -4,7 +4,7 @@
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 
 **Kumpulan tools Windows all-in-one untuk aktivasi, optimasi, dan perbaikan sistem.**
 
