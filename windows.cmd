@@ -323,11 +323,21 @@ cmd.exe /c KMS_Suite\KMS_Suite.bat -suite
 
 for /f "tokens=6 delims=[]. " %%# in ('ver') do set winbuild=%%#
 if %winbuild% LSS 10240 (
-exit
+echo.
+echo =====================================================
+echo Aktivasi selesai.
+echo =====================================================
+pause
+goto menu
 ) else (
 mode con cols=60 lines=1
 powershell -Command Remove-MpPreference -ExclusionPath "%0%" >nul 2>&1
-exit
+echo.
+echo =====================================================
+echo Aktivasi selesai.
+echo =====================================================
+pause
+goto menu
 )
 ::===============================================================================================================
 :KMS_Suite: Compressed2TXT v6.5
