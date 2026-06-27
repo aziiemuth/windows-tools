@@ -44,12 +44,13 @@ echo [16] Aktivasi Windows/Office Online V2
 echo [17] Ekstrak Serial Number + Model PC
 echo [18] Aktivasi Spotify
 echo [19] Ghost Toolbox
+echo [20] Server Manager (Apache ^& MySQL)
 echo [0] Keluar
 echo =====================================================
 echo Created By @Athiief
 echo =====================================================
 set "choice="
-set /p choice=Masukkan pilihan (0-19): 
+set /p choice=Masukkan pilihan (0-20): 
 
 :: Validasi input - cek apakah kosong
 if not defined choice (
@@ -62,22 +63,29 @@ if not defined choice (
 :: Validasi input - cek apakah angka valid (0-20)
 echo %choice%| findstr /r "^[0-9][0-9]*$" >nul
 if %errorLevel% neq 0 (
+    :: Allow non-numeric for submenus like sm_menu, sm_autostart
+    if "%choice%"=="sm_menu" goto skip_num_check
+    if "%choice%"=="sm_autostart" goto skip_num_check
     echo.
     echo [ERROR] Masukkan angka saja!
     timeout /t 2 /nobreak >nul
     goto menu
 )
+:skip_num_check
 
-:: Cek range 0-19
-if %choice% gtr 19 (
+:: Cek range 0-20
+if "%choice%"=="sm_menu" goto process_choice
+if "%choice%"=="sm_autostart" goto process_choice
+
+if %choice% gtr 20 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-19!
+    echo [ERROR] Pilihan harus antara 0-20!
     timeout /t 2 /nobreak >nul
     goto menu
 )
 if %choice% lss 0 (
     echo.
-    echo [ERROR] Pilihan harus antara 0-19!
+    echo [ERROR] Pilihan harus antara 0-20!
     timeout /t 2 /nobreak >nul
     goto menu
 )
@@ -120,6 +128,9 @@ if %choice%==15 goto win_u
 if %choice%==16 goto win_a
 if %choice%==17 goto s_n
 if %choice%==19 goto ghost_toolbox
+if "%choice%"=="20" goto launch_server_manager
+if "%choice%"=="sm_menu" goto sm_menu
+if "%choice%"=="sm_autostart" goto sm_autostart
 :: Fallback jika ada yang terlewat
 echo.
 echo [ERROR] Pilihan tidak valid!
@@ -1540,4 +1551,105 @@ echo =====================================================
 echo.
 echo Tekan tombol apapun untuk keluar...
 pause >nul
+exit
+
+:launch_server_manager
+start "Server Manager" cmd /c "%~f0" sm_menu
+goto menu
+
+:sm_menu
+cls
+COLOR 0A
+echo =======================================================
+echo    PENGATURAN APACHE ^& MYSQL (phpMyAdmin) STARTUP
+echo =======================================================
+echo.
+echo 1. Start otomatis keduanya (Sekarang)
+echo 2. Daftarkan untuk startup (Otomatis hidup saat PC/Laptop nyala)
+echo 3. Disable auto startup
+echo 4. Stop keduanya (Matikan layanan)
+echo 5. Exit
+echo.
+set /p sm_choice="Pilih opsi (1/2/3/4/5): "
+
+if "%sm_choice%"=="1" goto sm_start_now
+if "%sm_choice%"=="2" goto sm_enable_startup
+if "%sm_choice%"=="3" goto sm_disable_startup
+if "%sm_choice%"=="4" goto sm_stop_now
+if "%sm_choice%"=="5" exit
+
+goto sm_menu
+
+:sm_start_now
+echo.
+echo Memulai Apache dan MySQL...
+set APACHE_PATH=C:\xampp\apache\bin\httpd.exe
+set MYSQL_PATH=C:\xampp\mysql\bin\mysqld.exe
+
+if exist "%APACHE_PATH%" (
+    powershell -windowstyle hidden -command "Start-Process '%APACHE_PATH%' -WindowStyle Hidden"
+    echo [OK] Apache berhasil dijalankan.
+) else (
+    echo [ERROR] Apache tidak ditemukan di %APACHE_PATH%
+)
+
+if exist "%MYSQL_PATH%" (
+    powershell -windowstyle hidden -command "Start-Process '%MYSQL_PATH%' -WindowStyle Hidden"
+    echo [OK] MySQL berhasil dijalankan.
+) else (
+    echo [ERROR] MySQL tidak ditemukan di %MYSQL_PATH%
+)
+pause
+goto sm_menu
+
+:sm_enable_startup
+echo.
+echo Mendaftarkan script ke Startup Registry...
+set SCRIPT_PATH=%~f0
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "ApacheMySQLManager" /t REG_SZ /d "\"%SCRIPT_PATH%\" sm_autostart" /f >nul 2>&1
+if %errorLevel% == 0 (
+    echo [OK] Pendaftaran berhasil! Apache ^& MySQL akan otomatis hidup saat PC nyala.
+) else (
+    echo [ERROR] Gagal mendaftarkan ke registry. Pastikan script di-run sebagai Administrator.
+)
+pause
+goto sm_menu
+
+:sm_disable_startup
+echo.
+echo Menghapus dari Startup Registry...
+reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "ApacheMySQLManager" /f >nul 2>&1
+if %errorLevel% == 0 (
+    echo [OK] Auto startup berhasil dimatikan!
+) else (
+    echo [INFO] Auto startup belum terdaftar atau gagal dihapus.
+)
+pause
+goto sm_menu
+
+:sm_stop_now
+echo.
+echo Mematikan Apache dan MySQL...
+taskkill /F /IM httpd.exe >nul 2>&1
+if %errorLevel% == 0 (
+    echo [OK] Apache berhasil dimatikan.
+) else (
+    echo [INFO] Apache tidak sedang berjalan.
+)
+
+taskkill /F /IM mysqld.exe >nul 2>&1
+if %errorLevel% == 0 (
+    echo [OK] MySQL berhasil dimatikan.
+) else (
+    echo [INFO] MySQL tidak sedang berjalan.
+)
+pause
+goto sm_menu
+
+:sm_autostart
+set APACHE_PATH=C:\xampp\apache\bin\httpd.exe
+set MYSQL_PATH=C:\xampp\mysql\bin\mysqld.exe
+
+if exist "%APACHE_PATH%" powershell -windowstyle hidden -command "Start-Process '%APACHE_PATH%' -WindowStyle Hidden"
+if exist "%MYSQL_PATH%" powershell -windowstyle hidden -command "Start-Process '%MYSQL_PATH%' -WindowStyle Hidden"
 exit
