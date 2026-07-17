@@ -265,16 +265,377 @@ pause
 goto menu
 
 :disable_signature
+setlocal EnableDelayedExpansion
+chcp 65001 >nul 2>&1
+
+:: ------ Detect Windows Version ------
+set "DSE_PRODUCT=Unknown"
+set "DSE_BUILD=Unknown"
+for /f "tokens=3" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuild 2^>nul ^| findstr /i "CurrentBuild"') do set "DSE_BUILD=%%a"
+for /f "tokens=2*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductName 2^>nul ^| findstr /i "ProductName"') do set "DSE_PRODUCT=%%a %%b"
+
+:: ------ Check Current Status ------
+:DSE_REFRESH_STATUS
+set "DSE_STATUS_NOINTEGRITY=OFF"
+set "DSE_STATUS_TESTSIGN=OFF"
+set "DSE_CURRENT_STATE=ENABLED - Driver Signature ON - Default"
+
+for /f "tokens=2 delims= " %%a in ('bcdedit /enum {current} 2^>nul ^| findstr /i "nointegritychecks"') do (
+    if /i "%%a"=="Yes" set "DSE_STATUS_NOINTEGRITY=ON"
+)
+for /f "tokens=2 delims= " %%a in ('bcdedit /enum {current} 2^>nul ^| findstr /i "testsigning"') do (
+    if /i "%%a"=="Yes" set "DSE_STATUS_TESTSIGN=ON"
+)
+
+if "!DSE_STATUS_NOINTEGRITY!"=="ON" if "!DSE_STATUS_TESTSIGN!"=="ON" set "DSE_CURRENT_STATE=DISABLED - Driver Signature OFF"
+if "!DSE_STATUS_NOINTEGRITY!"=="ON" if "!DSE_STATUS_TESTSIGN!"=="OFF" set "DSE_CURRENT_STATE=PARTIALLY DISABLED"
+if "!DSE_STATUS_NOINTEGRITY!"=="OFF" if "!DSE_STATUS_TESTSIGN!"=="ON" set "DSE_CURRENT_STATE=TEST MODE - Test Signing ON"
+
+:: ------ Check Secure Boot Status ------
+set "DSE_SECUREBOOT=Unknown"
+for /f "tokens=3" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\SecureBoot\State" /v UEFISecureBootEnabled 2^>nul ^| findstr /i "UEFISecureBootEnabled"') do (
+    if "%%a"=="0x1" (set "DSE_SECUREBOOT=ENABLED") else (set "DSE_SECUREBOOT=DISABLED")
+)
+
+:: ============================================================
+::  DSE SUB-MENU
+:: ============================================================
+:DSE_MENU
 cls
-echo =====================================================
-echo   Menonaktifkan Driver Signature Enforcement
-echo =====================================================
-bcdedit /set nointegritychecks on
-echo =====================================================
-echo Driver Signature Enforcement telah dinonaktifkan.
-echo =====================================================
+echo.
+echo  ================================================================
+echo       DRIVER SIGNATURE ENFORCEMENT TOOL - Windows 10/11
+echo  ================================================================
+echo.
+echo  OS         : !DSE_PRODUCT!
+echo  Build      : !DSE_BUILD!
+echo  Secure Boot: !DSE_SECUREBOOT!
+echo  Status     : !DSE_CURRENT_STATE!
+echo.
+echo  ================================================================
+echo.
+echo  [1] DISABLE Driver Signature Enforcement
+echo      Izinkan install driver unsigned
+echo.
+echo  [2] ENABLE Driver Signature Enforcement
+echo      Kembalikan ke default / normal
+echo.
+echo  [3] Cek Status Saat Ini
+echo.
+echo  [4] Restart ke BIOS / UEFI Firmware Settings
+echo      Masuk BIOS saat restart
+echo.
+echo  [5] Kembali ke Menu Utama
+echo.
+echo  ================================================================
+echo.
+
+if "!DSE_SECUREBOOT!"=="ENABLED" (
+    echo  [^^!] WARNING: Secure Boot aktif. Beberapa metode mungkin
+    echo      memerlukan Secure Boot dimatikan dari BIOS/UEFI.
+    echo      Gunakan opsi [4] untuk masuk ke BIOS/UEFI.
+    echo.
+)
+
+set "DSE_CHOICE="
+set /p DSE_CHOICE="  Pilih opsi [1-5]: "
+
+if "!DSE_CHOICE!"=="1" goto DSE_DISABLE
+if "!DSE_CHOICE!"=="2" goto DSE_ENABLE
+if "!DSE_CHOICE!"=="3" goto DSE_STATUS
+if "!DSE_CHOICE!"=="4" goto DSE_BIOS
+if "!DSE_CHOICE!"=="5" (
+    endlocal
+    goto menu
+)
+goto DSE_MENU
+
+:: ============================================================
+::  DISABLE Driver Signature Enforcement
+:: ============================================================
+:DSE_DISABLE
+cls
+echo.
+echo  ================================================================
+echo   DISABLING Driver Signature Enforcement...
+echo  ================================================================
+echo.
+
+echo  [1/4] Menonaktifkan Integrity Checks...
+bcdedit /set {current} nointegritychecks on >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] nointegritychecks = ON
+) else (
+    echo        [GAGAL] Tidak dapat mengubah nointegritychecks
+)
+
+echo.
+echo  [2/4] Mengaktifkan Test Signing Mode...
+bcdedit /set {current} testsigning on >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] testsigning = ON
+) else (
+    echo        [GAGAL] Jika Secure Boot aktif, matikan dulu dari BIOS
+)
+
+echo.
+echo  [3/4] Mengatur Load Options...
+bcdedit /set {current} loadoptions DDISABLE_INTEGRITY_CHECKS >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] loadoptions = DDISABLE_INTEGRITY_CHECKS
+) else (
+    echo        [INFO] Load options tidak dapat diatur - opsional
+)
+
+echo.
+echo  [4/4] Menonaktifkan Code Integrity via Registry...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI" /v SkipSigning /t REG_DWORD /d 1 /f >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] Registry CI\SkipSigning = 1
+) else (
+    echo        [INFO] Registry tidak dapat diubah - opsional
+)
+
+echo.
+echo  ================================================================
+echo   SELESAI! Driver Signature Enforcement DINONAKTIFKAN
+echo  ================================================================
+echo.
+echo  [^^!] Perubahan akan aktif setelah RESTART.
+echo  [^^!] Watermark "Test Mode" akan muncul di desktop.
+echo      Ini normal - menandakan unsigned driver diizinkan.
+echo.
+
+set "DSE_RESTART="
+set /p DSE_RESTART="  Restart sekarang? (Y/N): "
+if /i "!DSE_RESTART!"=="Y" (
+    echo.
+    echo  Restarting dalam 5 detik...
+    shutdown /r /t 5 /c "Restarting - Driver Signature Disabled"
+    endlocal
+    exit /b
+)
+echo.
+echo  [i] Jangan lupa restart PC untuk menerapkan perubahan.
+echo.
 pause
-goto menu
+goto DSE_REFRESH_STATUS
+
+:: ============================================================
+::  ENABLE Driver Signature Enforcement (Restore Default)
+:: ============================================================
+:DSE_ENABLE
+cls
+echo.
+echo  ================================================================
+echo   ENABLING Driver Signature Enforcement - Default...
+echo  ================================================================
+echo.
+
+echo  [1/4] Mengaktifkan kembali Integrity Checks...
+bcdedit /set {current} nointegritychecks off >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] nointegritychecks = OFF
+) else (
+    echo        [INFO] Mencoba menghapus entry...
+    bcdedit /deletevalue {current} nointegritychecks >nul 2>&1
+    echo        [OK] Sudah dalam keadaan default
+)
+
+echo.
+echo  [2/4] Menonaktifkan Test Signing Mode...
+bcdedit /set {current} testsigning off >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] testsigning = OFF
+) else (
+    echo        [INFO] Mencoba menghapus entry...
+    bcdedit /deletevalue {current} testsigning >nul 2>&1
+    echo        [OK] Sudah dalam keadaan default
+)
+
+echo.
+echo  [3/4] Menghapus Load Options...
+bcdedit /deletevalue {current} loadoptions >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] loadoptions dihapus
+) else (
+    echo        [OK] loadoptions sudah dalam keadaan default
+)
+
+echo.
+echo  [4/4] Mengembalikan Code Integrity Registry...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI" /v SkipSigning /t REG_DWORD /d 0 /f >nul 2>&1
+if !errorlevel! equ 0 (
+    echo        [OK] Registry CI\SkipSigning = 0
+) else (
+    echo        [INFO] Registry sudah dalam keadaan default
+)
+
+echo.
+echo  ================================================================
+echo   SELESAI! Driver Signature Enforcement DIAKTIFKAN
+echo  ================================================================
+echo.
+echo  [^^!] Perubahan akan aktif setelah RESTART.
+echo  [^^!] Watermark "Test Mode" akan hilang setelah restart.
+echo.
+
+set "DSE_RESTART="
+set /p DSE_RESTART="  Restart sekarang? (Y/N): "
+if /i "!DSE_RESTART!"=="Y" (
+    echo.
+    echo  Restarting dalam 5 detik...
+    shutdown /r /t 5 /c "Restarting - Driver Signature Enabled"
+    endlocal
+    exit /b
+)
+echo.
+echo  [i] Jangan lupa restart PC untuk menerapkan perubahan.
+echo.
+pause
+goto DSE_REFRESH_STATUS
+
+:: ============================================================
+::  Check Current Status Detail
+:: ============================================================
+:DSE_STATUS
+cls
+echo.
+echo  ================================================================
+echo   STATUS DETAIL - Driver Signature Enforcement
+echo  ================================================================
+echo.
+echo  --- Informasi Sistem ---
+echo  OS         : !DSE_PRODUCT!
+echo  Build      : !DSE_BUILD!
+echo  Secure Boot: !DSE_SECUREBOOT!
+echo.
+echo  --- BCDEdit Current Configuration ---
+echo.
+
+echo  [nointegritychecks]
+set "DSE_NIC_FOUND=0"
+for /f "tokens=2 delims= " %%a in ('bcdedit /enum {current} 2^>nul ^| findstr /i "nointegritychecks"') do (
+    echo    Value: %%a
+    set "DSE_NIC_FOUND=1"
+)
+if "!DSE_NIC_FOUND!"=="0" echo    Value: Not set - Default = Integrity checks ENABLED
+
+echo.
+echo  [testsigning]
+set "DSE_TS_FOUND=0"
+for /f "tokens=2 delims= " %%a in ('bcdedit /enum {current} 2^>nul ^| findstr /i "testsigning"') do (
+    echo    Value: %%a
+    set "DSE_TS_FOUND=1"
+)
+if "!DSE_TS_FOUND!"=="0" echo    Value: Not set - Default = Test signing DISABLED
+
+echo.
+echo  [loadoptions]
+set "DSE_LO_FOUND=0"
+for /f "tokens=2*" %%a in ('bcdedit /enum {current} 2^>nul ^| findstr /i "loadoptions"') do (
+    echo    Value: %%a %%b
+    set "DSE_LO_FOUND=1"
+)
+if "!DSE_LO_FOUND!"=="0" echo    Value: Not set
+
+echo.
+echo  --- Registry ---
+echo.
+echo  [HKLM\SYSTEM\CurrentControlSet\Control\CI]
+set "DSE_REG_FOUND=0"
+for /f "tokens=3" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\CI" /v SkipSigning 2^>nul ^| findstr /i "SkipSigning"') do (
+    set "DSE_REG_FOUND=1"
+    if "%%a"=="0x1" (
+        echo    SkipSigning: 1 - Code Integrity check DISABLED
+    ) else (
+        echo    SkipSigning: 0 - Code Integrity check ENABLED
+    )
+)
+if "!DSE_REG_FOUND!"=="0" echo    SkipSigning: Not set - Default
+
+echo.
+echo  --- Kesimpulan ---
+echo.
+if "!DSE_STATUS_NOINTEGRITY!"=="ON" if "!DSE_STATUS_TESTSIGN!"=="ON" (
+    echo  [^^!] Driver Signature Enforcement: NONAKTIF
+    echo      Anda bisa install unsigned driver.
+    goto DSE_STATUS_END
+)
+if "!DSE_STATUS_NOINTEGRITY!"=="ON" (
+    echo  [~] Status: SEBAGIAN NONAKTIF
+    echo      nointegritychecks ON, tapi testsigning OFF
+    goto DSE_STATUS_END
+)
+if "!DSE_STATUS_TESTSIGN!"=="ON" (
+    echo  [~] Status: TEST MODE
+    echo      testsigning ON, tapi nointegritychecks OFF
+    goto DSE_STATUS_END
+)
+echo  [OK] Driver Signature Enforcement: AKTIF - Default
+echo      Hanya signed driver yang bisa di-install.
+
+:DSE_STATUS_END
+echo.
+echo  ================================================================
+echo.
+pause
+goto DSE_MENU
+
+:: ============================================================
+::  Restart to BIOS/UEFI Firmware Settings
+:: ============================================================
+:DSE_BIOS
+cls
+echo.
+echo  ================================================================
+echo   RESTART KE BIOS / UEFI FIRMWARE SETTINGS
+echo  ================================================================
+echo.
+echo  [i] Fitur ini akan me-restart PC dan langsung
+echo      masuk ke halaman BIOS/UEFI Firmware Settings.
+echo.
+echo  [i] Persyaratan:
+echo      - PC harus menggunakan UEFI, bukan Legacy BIOS
+echo      - Didukung di Windows 10 dan Windows 11
+echo.
+echo  [^^!] Pastikan semua pekerjaan sudah disimpan!
+echo.
+
+set "DSE_CONFIRM="
+set /p DSE_CONFIRM="  Lanjutkan restart ke BIOS? (Y/N): "
+if /i not "!DSE_CONFIRM!"=="Y" goto DSE_MENU
+
+echo.
+echo  Memeriksa dukungan UEFI...
+echo.
+
+:: Check if firmware boot to UEFI is supported
+bcdedit /enum firmware >nul 2>&1
+if !errorlevel! neq 0 (
+    echo  [X] GAGAL: PC ini menggunakan Legacy BIOS, bukan UEFI.
+    echo      Fitur restart ke BIOS tidak didukung.
+    echo      Silakan masuk BIOS secara manual dengan menekan
+    echo      tombol DEL, F2, F10, atau F12 saat booting.
+    echo.
+    pause
+    goto DSE_MENU
+)
+
+echo  [OK] UEFI terdeteksi. Restarting ke BIOS...
+echo.
+shutdown /r /fw /t 3 /c "Restarting ke BIOS/UEFI Firmware Settings"
+if !errorlevel! neq 0 (
+    echo  [X] GAGAL: Tidak dapat menjadwalkan restart ke BIOS.
+    echo      Coba cara manual: Settings - Recovery - Advanced Startup
+    echo.
+    pause
+    goto DSE_MENU
+)
+echo  PC akan restart dalam 3 detik...
+timeout /t 4 >nul
+endlocal
+exit /b
 
 :bios
 cls
@@ -343,6 +704,7 @@ goto menu
 ) else (
 mode con cols=60 lines=1
 powershell -Command Remove-MpPreference -ExclusionPath "%0%" >nul 2>&1
+mode con cols=120 lines=30
 echo.
 echo =====================================================
 echo Aktivasi selesai.
